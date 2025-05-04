@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 const jwt = require("jsonwebtoken")
 const User = require("../models/userModel")
-const { authenticateToken } = require("../middleware/auth")
+const { protect } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -158,17 +158,22 @@ router.post("/login", async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get("/me", authenticateToken, async (req, res) => {
+router.get('/me', protect, (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password")
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
+    // The user is already attached to req by the protect middleware
+    // Simply return that user data
+    console.log('GET /me handler reached with user:', req.user._id);
 
-    res.json(user)
+    res.status(200).json({
+      success: true,
+      data: req.user
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching user", error: error.message })
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while retrieving user data'
+    });
   }
-})
-
+});
 module.exports = router

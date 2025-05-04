@@ -12,7 +12,7 @@ const {
   getBookingsByUser,
   getBookingsByService
 } = require("../controllers/bookingController");
-const { authenticateToken } = require("../middleware/auth");
+const { authenticateToken, protect } = require("../middleware/auth");
 const { checkUserRole } = require("../middleware/roleCheck");
 
 /**
@@ -127,7 +127,7 @@ const { checkUserRole } = require("../middleware/roleCheck");
  *       500:
  *         description: Server error
  */
-router.post("/", authenticateToken, createBooking);
+router.post("/", protect, createBooking);
 
 /**
  * @swagger
@@ -153,7 +153,7 @@ router.post("/", authenticateToken, createBooking);
  *       500:
  *         description: Server error
  */
-router.get("/", authenticateToken, checkUserRole("ADMIN"), getBookings);
+router.get("/", protect, checkUserRole("ADMIN"), getBookings);
 
 /**
  * @swagger
@@ -179,7 +179,7 @@ router.get("/", authenticateToken, checkUserRole("ADMIN"), getBookings);
  *       500:
  *         description: Server error
  */
-router.get("/client", authenticateToken, checkUserRole("CLIENT"), getClientBookings);
+router.get("/client", protect, checkUserRole("CLIENT"), getClientBookings);
 
 /**
  * @swagger
@@ -205,7 +205,7 @@ router.get("/client", authenticateToken, checkUserRole("CLIENT"), getClientBooki
  *       500:
  *         description: Server error
  */
-router.get("/provider", authenticateToken, checkUserRole("SERVICE_USER"), getProviderBookings);
+router.get("/provider", protect, checkUserRole("SERVICE_USER"), getProviderBookings);
 
 /**
  * @swagger
@@ -236,7 +236,7 @@ router.get("/provider", authenticateToken, checkUserRole("SERVICE_USER"), getPro
  *       500:
  *         description: Server error
  */
-router.get("/:id", authenticateToken, getBookingById);
+router.get("/:id", protect, getBookingById);
 
 /**
  * @swagger
@@ -277,7 +277,7 @@ router.get("/:id", authenticateToken, getBookingById);
  *       500:
  *         description: Server error
  */
-router.patch("/:id/status", authenticateToken, checkUserRole(["SERVICE_USER", "ADMIN"]), updateBookingStatus);
+router.patch("/:id/status", protect, checkUserRole(["SERVICE_USER", "ADMIN"]), updateBookingStatus);
 
 /**
  * @swagger
@@ -329,7 +329,7 @@ router.patch("/:id/status", authenticateToken, checkUserRole(["SERVICE_USER", "A
  *       500:
  *         description: Server error
  */
-router.put("/:id", authenticateToken, updateBooking);
+router.put("/:id", protect, updateBooking);
 
 /**
  * @swagger
@@ -356,7 +356,7 @@ router.put("/:id", authenticateToken, updateBooking);
  *       500:
  *         description: Server error
  */
-router.delete("/:id", authenticateToken, deleteBooking);
+router.delete("/:id", protect, deleteBooking);
 
 /**
  * @swagger
@@ -391,7 +391,7 @@ router.delete("/:id", authenticateToken, deleteBooking);
  *       500:
  *         description: Server error
  */
-router.get("/user/:userId", authenticateToken, checkUserRole("ADMIN"), getBookingsByUser);
+router.get("/user/:userId", protect, checkUserRole("ADMIN"), getBookingsByUser);
 
 /**
  * @swagger
@@ -426,6 +426,6 @@ router.get("/user/:userId", authenticateToken, checkUserRole("ADMIN"), getBookin
  *       500:
  *         description: Server error
  */
-router.get("/service/:serviceId", authenticateToken, checkUserRole(["SERVICE_USER", "ADMIN"]), getBookingsByService);
+router.get("/service/:serviceId", protect, checkUserRole(["SERVICE_USER", "ADMIN"]), getBookingsByService);
 
 module.exports = router;

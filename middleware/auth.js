@@ -7,17 +7,27 @@ const User = require('../models/userModel');
  * @route - Any protected route
  * @access - Private
  */
+
+/**
+ * Middleware to protect routes that require authentication
+ * @route - Any protected route
+ * @access - Private
+ */
 exports.protect = asyncHandler(async (req, res, next) => {
   let token;
+
+  console.log('Auth Headers:', req.headers.authorization);
 
   // Check if authorization header exists and starts with Bearer
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     // Get token from header
     token = req.headers.authorization.split(' ')[1];
+    console.log('Token extracted:', token ? 'Token found' : 'Token empty or undefined');
   }
 
   // Check if token exists
   if (!token) {
+    console.log('No token provided');
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'
@@ -25,14 +35,32 @@ exports.protect = asyncHandler(async (req, res, next) => {
   }
 
   try {
+    // Log JWT secret presence (don't log the actual secret!)
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Decoded token:', decoded);
+
+    // Support both id and userId in the token payload for backward compatibility
+    const userId = decoded.id || decoded.userId;
+    console.log('User ID extracted:', userId);
+
+    if (!userId) {
+      console.log('No user ID found in token');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token format'
+      });
+    }
 
     // Get user from the token
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(userId);
+    console.log('User found:', !!user);
 
     // Check if user exists
     if (!user) {
+      console.log('User not found for ID:', userId);
       return res.status(401).json({
         success: false,
         message: 'User not found or token is no longer valid'
@@ -41,6 +69,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
     // Add user to request object
     req.user = user;
+    console.log('User attached to request');
 
     next();
   } catch (error) {
@@ -51,6 +80,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
     });
   }
 });
+
 
 /**
  * Middleware to restrict access based on user role
