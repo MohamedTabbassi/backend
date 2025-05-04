@@ -1,6 +1,5 @@
-// db.js
-
 const mongoose = require('mongoose');
+const boom = require('boom');
 
 const connectDB = async () => {
   try {
@@ -10,7 +9,8 @@ const connectDB = async () => {
     });
     console.log('Connected to MongoDB');
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
+    const boomError = boom.boomify(error, { statusCode: 500 });
+    console.error(boomError);
     process.exit(1); // Exit process with failure
   }
 };

@@ -41,7 +41,7 @@ exports.getBookings = asyncHandler(async (req, res) => {
   const bookings = await Booking.find()
     .populate('clientId', 'name email')
     .populate('serviceId', 'name price');
-  
+
   res.status(200).json({
     success: true,
     count: bookings.length,
@@ -53,15 +53,37 @@ exports.getBookings = asyncHandler(async (req, res) => {
 // @route   GET /api/bookings/client
 // @access  Private (Client)
 exports.getClientBookings = asyncHandler(async (req, res) => {
-  const bookings = await Booking.find({ clientId: req.user.userId })
-    .populate('serviceId', 'name price duration')
-    .sort({ bookingDate: -1 });
-  
-  res.status(200).json({
-    success: true,
-    count: bookings.length,
-    data: bookings
-  });
+  // Double check that user is authenticated and has the correct role
+  if (!req.user || !req.user.userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  if (req.user.role !== 'CLIENT') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden - Only clients can access their bookings'
+    });
+  }
+
+  try {
+    // Query the bookings with proper error handling
+    const bookings = await Booking.find({ clientId: req.user.userId })
+      .populate('serviceId', 'name price duration')
+      .sort({ date: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      data: bookings
+    });
+  } catch (error) {
+    console.error('Error fetching client bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching bookings',
+      error: error.message
+    });
+  }
 });
 
 // @desc    Get provider's bookings

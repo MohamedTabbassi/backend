@@ -2,10 +2,15 @@ const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 
-// Protect routes
+/**
+ * Middleware to protect routes that require authentication
+ * @route - Any protected route
+ * @access - Private
+ */
 exports.protect = asyncHandler(async (req, res, next) => {
   let token;
 
+  // Check if authorization header exists and starts with Bearer
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     // Get token from header
     token = req.headers.authorization.split(' ')[1];
@@ -13,7 +18,10 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   // Check if token exists
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
   }
 
   try {
@@ -21,23 +29,95 @@ exports.protect = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from the token
-    req.user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id);
+
+    // Check if user exists
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or token is no longer valid'
+      });
+    }
+
+    // Add user to request object
+    req.user = user;
 
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
+    console.error('Token verification error:', error.message);
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
   }
 });
 
-// Grant access to specific roles
+/**
+ * Middleware to restrict access based on user role
+ * @param {...string} roles - Roles that are allowed to access the route
+ * @returns {function} - Middleware function
+ */
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: `User role ${req.user.role} is not authorized to access this route` 
+    if (!req.user) {
+      return res.status(500).json({
+        success: false,
+        message: 'Protected route accessed without user authentication'
       });
     }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: `User role ${req.user.role} is not authorized to access this route`
+      });
+    }
+
     next();
   };
 };
+
+/**
+ * Alternative token authentication middleware
+ */
+exports.authenticateToken = asyncHandler(async (req, res, next) => {
+  // 1. Check if authorization header exists
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'No token provided'
+    });
+  }
+
+  // 2. Extract the token
+  const token = authHeader.split(' ')[1];
+
+  try {
+    // 3. Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 4. Find the user
+    const user = await User.findById(decoded.id);
+
+    // 5. Check if user exists
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or token is no longer valid'
+      });
+    }
+
+    // 6. Add user data to request object (full user object for consistency with protect middleware)
+    req.user = user;
+
+    next();
+  } catch (error) {
+    console.error('Auth error:', error.message);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token'
+    });
+  }
+});
